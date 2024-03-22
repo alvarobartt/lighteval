@@ -33,7 +33,7 @@ from lighteval.utils import is_peft_available
 
 
 if is_peft_available():
-    from peft import PeftModel
+    from peft import AutoPeftModelForCausalLM
 
 
 class AdapterModel(BaseModel):
@@ -53,15 +53,12 @@ class AdapterModel(BaseModel):
 
         if self.accelerator.is_local_main_process if self.accelerator is not None else nullcontext():
             hlog(f"Loading model from {adapter_weights} and applying adapter to {config.base_model}")
-            base = AutoModelForCausalLM.from_pretrained(
-                config.base_model, torch_dtype=torch.float16, low_cpu_mem_usage=True, token=env_config.token
+            model = AutoPeftModelForCausalLM.from_pretrained(
+                adapter_weights, torch_dtype=torch.float16, low_cpu_mem_usage=True, token=env_config.token
             )
-            # Should pass revision
-            model = PeftModel.from_pretrained(base, adapter_weights)
-            model = model.merge_and_unload()
 
             hlog("Saving model with adapter applied")
-            base.save_pretrained(merged_path)
+            model.save_pretrained(merged_path)
 
         hlog(f"Loading model from {merged_path}")
 
